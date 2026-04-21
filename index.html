@@ -33,12 +33,20 @@
       document.getElementById("err").style.display="block";
       document.getElementById("err-msg").textContent=String(msg);
     }
-    // Fallback: if still loading after 10s, something went wrong silently
+    // Loading progress feedback
+    var loadMsg = document.querySelector("#loading p");
+    var dots = 0;
+    var loadInterval = setInterval(function() {
+      dots = (dots + 1) % 4;
+      if (loadMsg) loadMsg.textContent = "Lade" + ".".repeat(dots+1);
+    }, 500);
+    // Timeout after 30s
     setTimeout(function() {
+      clearInterval(loadInterval);
       if (document.getElementById("loading").style.display !== "none") {
-        showErr("Timeout: Die App hat sich nicht gemeldet.\n\nMögliche Ursache: JavaScript-Fehler ohne Stack-Trace.\nBitte Seite neu laden (Pull-to-refresh).");
+        showErr("Timeout nach 30s.\n\nVersuche: Seite mit Pull-to-refresh neu laden.\nFalls es weiterhin nicht klappt: JavaScript in Safari aktiviert?");
       }
-    }, 10000);
+    }, 30000);
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" onerror="showErr('FEHLER: React CDN')"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" onerror="showErr('FEHLER: ReactDOM CDN')"></script>
