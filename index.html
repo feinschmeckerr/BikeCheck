@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Rennrad Kaufanalyse</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'none';">
+  <title>Rennrad Kaufanalyse — BikeCheck</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -12,7 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #060810; color: #f1f5f9; font-family: 'Outfit', system-ui, sans-serif; min-height: 100vh; }
+    html, body { background: #060810; color: #f1f5f9; font-family: Outfit, system-ui, sans-serif; min-height: 100vh; }
     button { cursor: pointer; background: none; border: none; font-family: inherit; }
     ::-webkit-scrollbar { height: 4px; width: 4px; background: #1a1f2e; }
     ::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
@@ -21,43 +22,29 @@
     #loading {
       position: fixed; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; background: #060810; z-index: 9999;
+      transition: opacity 0.3s;
     }
-    #loading .spinner {
-      width: 48px; height: 48px; border: 3px solid #1a1f2e;
-      border-top-color: #c8fb00; border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    #loading p { margin-top: 16px; color: #4b5563; font-size: 13px; font-family: monospace; }
+    .spinner { width: 44px; height: 44px; border: 3px solid #1a1f2e; border-top-color: #c8fb00; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    #loading p { margin-top: 14px; color: #4b5563; font-size: 12px; font-family: monospace; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #error-box {
-      display: none; position: fixed; inset: 0; background: #060810;
-      padding: 24px; overflow: auto; z-index: 9999;
-    }
-    #error-box pre { color: #f87171; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
   </style>
 </head>
 <body>
   <div id="loading">
     <div class="spinner"></div>
-    <p>Lade Dashboard...</p>
-  </div>
-  <div id="error-box">
-    <p style="color:#c8fb00;font-weight:700;margin-bottom:12px;font-family:monospace">⚠ Fehler beim Laden:</p>
-    <pre id="error-msg"></pre>
+    <p>Kompiliere Dashboard&hellip;</p>
   </div>
   <div id="root"></div>
 
   <script>
-    window.onerror = function(msg, src, line, col, err) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('error-box').style.display = 'block';
-      document.getElementById('error-msg').textContent = (err ? err.stack : msg) + '\n\nLine: ' + line + ', Col: ' + col;
-    };
-    window.addEventListener('unhandledrejection', function(e) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('error-box').style.display = 'block';
-      document.getElementById('error-msg').textContent = String(e.reason);
-    });
+    window.addEventListener('error', function(e) {
+      var d = document.getElementById('loading');
+      d.innerHTML = '<div style="padding:24px;max-width:90vw"><p style="color:#c8fb00;font-weight:700;font-family:monospace;margin-bottom:10px">Fehler:</p><pre style="color:#f87171;font-size:11px;white-space:pre-wrap;word-break:break-all">' + (e.error ? e.error.stack : e.message) + '</pre></div>';
+
+```
+});
+```
+
   </script>
 
   <script type="text/babel">
@@ -1050,7 +1037,7 @@ function App(){
   return(
     <div style={{minHeight:"100vh",background:"#060810",color:"#f1f5f9",
       fontFamily:"'Outfit',system-ui,sans-serif",paddingBottom:80}}>
-      {/* fonts loaded in head */}
+      {null}
       <style>{`*{box-sizing:border-box;margin:0;padding:0;}button{cursor:pointer;background:none;border:none;}
         @keyframes si{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
         ::-webkit-scrollbar{height:3px;background:#1a1f2e;}::-webkit-scrollbar-thumb{background:#374151;border-radius:2px;}`}</style>
@@ -1190,26 +1177,13 @@ function App(){
 );
 }
 
-class ErrorBoundary extends React.Component {
-constructor(props) { super(props); this.state = { error: null }; }
-static getDerivedStateFromError(e) { return { error: e }; }
-render() {
-if (this.state.error) {
-return (
-<div style={{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12}}>
-<div style={{color:”#c8fb00”,fontWeight:700,marginBottom:12}}>⚠ Runtime Fehler:</div>
-<pre style={{whiteSpace:“pre-wrap”,wordBreak:“break-all”}}>{this.state.error.stack}</pre>
-</div>
+const rootEl = document.getElementById(‘root’);
+const root = ReactDOM.createRoot(rootEl);
+root.render(
+React.createElement(ErrorBoundary, null, React.createElement(App, null))
 );
-}
-return this.props.children;
-}
-}
-
-const root = ReactDOM.createRoot(document.getElementById(‘root’));
-root.render(<ErrorBoundary><App /></ErrorBoundary>);
 document.getElementById(‘loading’).style.display = ‘none’;
-</script>
 
+  </script>
 </body>
 </html>
