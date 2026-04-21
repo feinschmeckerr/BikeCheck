@@ -34,17 +34,40 @@
       document.getElementById('err-msg').textContent=String(msg);
     }
   </script>
+
+  <!-- React + ReactDOM (cdnjs — zuverlässig) -->
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"
-    onerror="showErr('FEHLER: React CDN fehlgeschlagen')"></script>
+    onerror="showErr('FEHLER: React CDN')"></script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"
-    onerror="showErr('FEHLER: ReactDOM CDN fehlgeschlagen')"></script>
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.min.js"
-    onerror="showErr('FEHLER: Recharts CDN fehlgeschlagen')"></script>
+    onerror="showErr('FEHLER: ReactDOM CDN')"></script>
+
+  <!-- Recharts: primär jsdelivr, Fallback unpkg -->
+
   <script>
-  try {
-    if(!window.React)    throw new Error('React nicht geladen');
-    if(!window.ReactDOM) throw new Error('ReactDOM nicht geladen');
-    if(!window.Recharts) throw new Error('Recharts nicht geladen');
+    function loadRecharts(cb) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js';
+      s.onload = cb;
+      s.onerror = function() {
+        // Fallback to unpkg
+        var s2 = document.createElement('script');
+        s2.src = 'https://unpkg.com/recharts@2.10.4/umd/Recharts.min.js';
+        s2.onload = cb;
+        s2.onerror = function() {
+          showErr('Recharts CDN fehlgeschlagen (jsdelivr + unpkg).\nBitte Internetverbindung pruefen.');
+        };
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(s);
+    }
+
+    function startApp() {
+      try {
+        if (!window.React)    throw new Error('React nicht geladen');
+        if (!window.ReactDOM) throw new Error('ReactDOM nicht geladen');
+        if (!window.Recharts) { window.Recharts = {}; }  // Fallback: empty object
 const { useState, useMemo } = React;
 // Recharts exports - try window.Recharts (UMD global)
 const _RC = window.Recharts || {};
@@ -1706,28 +1729,36 @@ function App() {
 }
 
 class ErrorBoundary extends React.Component {
-constructor(props) { super(props); this.state = { error: null }; }
-static getDerivedStateFromError(e) { return { error: e }; }
-render() {
-if (this.state.error) {
-const e = this.state.error;
-return React.createElement(‘div’, {style:{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12}},
-React.createElement(‘div’, {style:{color:”#c8fb00”,fontWeight:700,marginBottom:12}}, “Runtime Fehler:”),
-React.createElement(‘pre’, null, String(e.stack || e.message || e))
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      const e = this.state.error;
+      return React.createElement('div', {style:{padding:24,color:"#f87171",fontFamily:"monospace",fontSize:12}},
+        React.createElement('div', {style:{color:"#c8fb00",fontWeight:700,marginBottom:12}}, "Runtime Fehler:"),
+        React.createElement('pre', null, String(e.stack || e.message || e))
+      );
+    }
+    return this.props.children;
+  }
+}
+ReactDOM.createRoot(document.getElementById('root')).render(
+  React.createElement(ErrorBoundary, null, React.createElement(App, null))
 );
-}
-return this.props.children;
-}
-}
-ReactDOM.createRoot(document.getElementById(‘root’)).render(
-React.createElement(ErrorBoundary, null, React.createElement(App, null))
-);
-document.getElementById(‘loading’).style.display = ‘none’;
+document.getElementById('loading').style.display = 'none';
 
-} catch(err) {
-showErr(err.stack || err.message || String(err));
-}
-</script>
+      } catch(err) {
+        showErr(err.stack || err.message || String(err));
+      }
+    }
+
+    // Load Recharts after React is ready, then start app
+    if (window.React && window.ReactDOM) {
+      loadRecharts(startApp);
+    } else {
+      window.addEventListener('load', function() { loadRecharts(startApp); });
+    }
+  </script>
 
 </body>
 </html>
