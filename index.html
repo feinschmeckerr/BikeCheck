@@ -29,45 +29,19 @@
   <div id="root"></div>
   <script>
     function showErr(msg){
-      document.getElementById('loading').style.display='none';
-      document.getElementById('err').style.display='block';
-      document.getElementById('err-msg').textContent=String(msg);
+      document.getElementById("loading").style.display="none";
+      document.getElementById("err").style.display="block";
+      document.getElementById("err-msg").textContent=String(msg);
     }
   </script>
-
-  <!-- React + ReactDOM (cdnjs — zuverlässig) -->
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"
-    onerror="showErr('FEHLER: React CDN')"></script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"
-    onerror="showErr('FEHLER: ReactDOM CDN')"></script>
-
-  <!-- Recharts: primär jsdelivr, Fallback unpkg -->
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" onerror="showErr('FEHLER: React CDN')"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" onerror="showErr('FEHLER: ReactDOM CDN')"></script>
   <script>
-    function loadRecharts(cb) {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js';
-      s.onload = cb;
-      s.onerror = function() {
-        // Fallback to unpkg
-        var s2 = document.createElement('script');
-        s2.src = 'https://unpkg.com/recharts@2.10.4/umd/Recharts.min.js';
-        s2.onload = cb;
-        s2.onerror = function() {
-          showErr('Recharts CDN fehlgeschlagen (jsdelivr + unpkg).\nBitte Internetverbindung pruefen.');
-        };
-        document.head.appendChild(s2);
-      };
-      document.head.appendChild(s);
-    }
-
-    function startApp() {
-      try {
-        if (!window.React)    throw new Error('React nicht geladen');
-        if (!window.ReactDOM) throw new Error('ReactDOM nicht geladen');
-        if (!window.Recharts) { window.Recharts = {}; }  // Fallback: empty object
+  try {
+    if(!window.React)    throw new Error("React nicht geladen");
+    if(!window.ReactDOM) throw new Error("ReactDOM nicht geladen");
+    // Recharts not needed - charts use pure SVG/CSS
+    window.Recharts = window.Recharts || {};
 const { useState, useMemo } = React;
 // Recharts exports - try window.Recharts (UMD global)
 const _RC = window.Recharts || {};
@@ -1264,98 +1238,150 @@ function HaendlerView() {
     marginBottom: 6
   } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700, color: "#e2e8f0" } }, item.bike), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: g.color, marginTop: 2 } }, item.haendler), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563", marginTop: 1 } }, item.addr), item.tel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563" } }, item.tel))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 9, color: "#6b7280", lineHeight: 1.4 } }, item.note))))));
 }
-function KostenView({ bikes, inkl_pm }) {
-  const sorted = [...bikes].sort((a, b) => total(a, inkl_pm) - total(b, inkl_pm));
-  const data = sorted.map((b) => ({
-    name: b.n.split(" ").pop().substring(0, 9),
-    basis: b.ang,
-    sat: SATTEL,
-    upg: b.upg,
-    pm2: inkl_pm && !b.pm ? PM_C : 0,
-    tot: total(b, inkl_pm),
-    col: b.col,
-    id: b.id
-  }));
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563", marginBottom: 10, fontFamily: "'JetBrains Mono',monospace" } }, "Angebot (farbig) + Sattel ", SATTEL, "\u20AC (grau) + LR-Upgrade (orange)", inkl_pm ? " + PM 313\u20AC (blau)" : "", " = Gesamtkosten"), /* @__PURE__ */ React.createElement("div", { style: { height: 380 } }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(BarChart, { data, layout: "vertical", margin: { left: 0, right: 65, top: 5, bottom: 5 } }, /* @__PURE__ */ React.createElement(XAxis, { type: "number", tick: { fill: "#4b5563", fontSize: 8, fontFamily: "monospace" }, tickFormatter: (v) => `${v}\u20AC` }), /* @__PURE__ */ React.createElement(YAxis, { type: "category", dataKey: "name", tick: { fill: "#9ca3af", fontSize: 9, fontFamily: "monospace" }, width: 60 }), /* @__PURE__ */ React.createElement(
-    Tooltip,
-    {
-      contentStyle: { background: "#0c1018", border: "1px solid #1f2937", borderRadius: 8, fontSize: 10 },
-      formatter: (v, n) => [
-        `${Number(v).toLocaleString("de-DE")} \u20AC`,
-        { basis: "Angebot", sat: "Sattel Fizik Argo", upg: "LR-Upgrade", pm2: "Powermeter" }[n] || n
-      ]
-    }
-  ), /* @__PURE__ */ React.createElement(Bar, { dataKey: "basis", stackId: "a" }, data.map((d, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: d.col, fillOpacity: 0.9 }))), /* @__PURE__ */ React.createElement(Bar, { dataKey: "sat", stackId: "a", fill: "#374151", fillOpacity: 0.7 }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "upg", stackId: "a", fill: "#ea580c", fillOpacity: 0.85 }), /* @__PURE__ */ React.createElement(Bar, { dataKey: "pm2", stackId: "a", radius: [0, 3, 3, 0], fill: "#3b82f6", fillOpacity: 0.85 }, /* @__PURE__ */ React.createElement(
-    LabelList,
-    {
-      dataKey: "tot",
-      position: "right",
-      style: { fill: "#9ca3af", fontSize: 9, fontFamily: "monospace" },
-      formatter: (v) => `${v.toLocaleString("de-DE")}\u20AC`
-    }
-  ))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 } }, [["Angebot", "#555"], ["Sattel +65\u20AC", "#374151"], ["LR-Upgrade", "#ea580c"], ["Powermeter +313\u20AC", "#3b82f6"]].map(([l, c]) => /* @__PURE__ */ React.createElement("div", { key: l, style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 10, height: 10, borderRadius: 2, background: c } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 8, color: "#4b5563" } }, l)))));
+function KostenView({bikes, inkl_pm}) {
+  const sorted = [...bikes].sort((a,b) => total(a,inkl_pm) - total(b,inkl_pm));
+  const maxVal = Math.max(...sorted.map(b => total(b,inkl_pm)));
+  return React.createElement("div", null,
+    React.createElement("div", {style:{fontSize:8,color:"#4b5563",marginBottom:14,fontFamily:"'JetBrains Mono',monospace"}},
+      "Angebot + Sattel 65€ + LR-Upgrade + PM (wenn aktiviert) = Gesamtkosten"),
+    sorted.map((b) => {
+      const T = total(b, inkl_pm);
+      const pctBasis = Math.round(b.ang / maxVal * 100);
+      const pctSat = Math.round(65 / maxVal * 100);
+      const pctUpg = Math.round(b.upg / maxVal * 100);
+      const pctPm = Math.round((inkl_pm && !b.pm ? 313 : 0) / maxVal * 100);
+      return React.createElement("div", {key:b.id, style:{marginBottom:10}},
+        React.createElement("div", {style:{display:"flex",justifyContent:"space-between",marginBottom:3}},
+          React.createElement("span", {style:{fontSize:9,color:b.col,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}, b.n.split(" ").pop()),
+          React.createElement("span", {style:{fontSize:9,color:"#9ca3af",fontFamily:"'JetBrains Mono',monospace"}}, T.toLocaleString("de-DE") + "€")
+        ),
+        React.createElement("div", {style:{height:16,background:"#1a1f2e",borderRadius:4,overflow:"hidden",display:"flex"}},
+          React.createElement("div", {style:{width:pctBasis+"%",background:b.col,opacity:.9}}),
+          React.createElement("div", {style:{width:pctSat+"%",background:"#374151"}}),
+          React.createElement("div", {style:{width:pctUpg+"%",background:"#ea580c"}}),
+          React.createElement("div", {style:{width:pctPm+"%",background:"#3b82f6"}})
+        )
+      );
+    }),
+    React.createElement("div", {style:{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}},
+      [["Angebot","#6b7280"],["Sattel +65€","#374151"],["LR-Upgrade","#ea580c"],["Powermeter","#3b82f6"]].map(([l,c]) =>
+        React.createElement("div", {key:l, style:{display:"flex",alignItems:"center",gap:4}},
+          React.createElement("div", {style:{width:10,height:10,borderRadius:2,background:c}}),
+          React.createElement("span", {style:{fontSize:8,color:"#6b7280"}}, l)
+        )
+      )
+    )
+  );
 }
-function GeometryView({ bikes }) {
-  const data = bikes.map((b) => ({ x: b.re, y: b.st, z: b.sr, id: b.id, col: b.col }));
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563", marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" } }, "X=Reach \xB7 Y=Stack \xB7 Blasengr\xF6\xDFe=S/R-Ratio (gr\xF6\xDFer=Endurance) \xB7 Gr. M / 181cm"), /* @__PURE__ */ React.createElement("div", { style: { height: 320 } }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(ScatterChart, { margin: { top: 15, right: 20, bottom: 20, left: 10 } }, /* @__PURE__ */ React.createElement(
-    XAxis,
-    {
-      type: "number",
-      dataKey: "x",
-      domain: [370, 400],
-      name: "Reach",
-      tick: { fill: "#4b5563", fontSize: 8, fontFamily: "monospace" },
-      tickFormatter: (v) => `${v}`,
-      label: { value: "Reach (mm) \u2190 Race / Endurance \u2192", fill: "#374151", fontSize: 7, position: "insideBottom", offset: -10 }
-    }
-  ), /* @__PURE__ */ React.createElement(
-    YAxis,
-    {
-      type: "number",
-      dataKey: "y",
-      domain: [525, 605],
-      name: "Stack",
-      tick: { fill: "#4b5563", fontSize: 8, fontFamily: "monospace" },
-      tickFormatter: (v) => `${v}`,
-      label: { value: "Stack (mm)", fill: "#374151", fontSize: 7, angle: -90, position: "insideLeft" }
-    }
-  ), /* @__PURE__ */ React.createElement(ZAxis, { type: "number", dataKey: "z", range: [50, 350] }), /* @__PURE__ */ React.createElement(Tooltip, { content: ({ payload }) => {
-    if (!payload?.length) return null;
-    const d = payload[0].payload;
-    const b = BIKES.find((x) => x.id === d.id);
-    if (!b) return null;
-    return /* @__PURE__ */ React.createElement("div", { style: { background: "#0c1018", border: `1px solid ${b.col}`, borderRadius: 8, padding: "9px 12px" } }, /* @__PURE__ */ React.createElement("div", { style: { color: b.col, fontWeight: 700, fontFamily: "monospace", fontSize: 10 } }, b.n), /* @__PURE__ */ React.createElement("div", { style: { color: "#9ca3af", fontSize: 9 } }, b.var), /* @__PURE__ */ React.createElement("div", { style: { color: "#f1f5f9", marginTop: 3, fontFamily: "monospace", fontSize: 9 } }, "Stack: ", b.st, "mm \xB7 Reach: ", b.re, "mm \xB7 S/R: ", b.sr.toFixed(2)));
-  } }), /* @__PURE__ */ React.createElement(ReferenceLine, { x: 384, stroke: "#1a2a1a", strokeDasharray: "4 3", label: { value: "Reach-Mitte", fill: "#2d3748", fontSize: 7, position: "top" } }), /* @__PURE__ */ React.createElement(ReferenceLine, { y: 560, stroke: "#1a2a1a", strokeDasharray: "4 3", label: { value: "Stack-Mitte", fill: "#2d3748", fontSize: 7, position: "right" } }), /* @__PURE__ */ React.createElement(Scatter, { data }, data.map((d, i) => /* @__PURE__ */ React.createElement(Cell, { key: i, fill: d.col, fillOpacity: 0.85 })))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginTop: 4 } }, bikes.filter((b) => b.carbon).map((b) => /* @__PURE__ */ React.createElement("div", { key: b.id, style: { display: "flex", alignItems: "center", gap: 3 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 8, height: 8, borderRadius: "50%", background: b.col } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 7, color: "#4b5563", fontFamily: "monospace" } }, b.n.split(" ").slice(-1)[0], " S", b.st, "/R", b.re)))));
+function GeometryView({bikes}) {
+  const cb = bikes.filter(b => b.carbon);
+  if (!cb.length) return React.createElement("div", {style:{color:"#4b5563",padding:20}}, "Keine Carbon-Räder.");
+  const minRe = Math.min(...cb.map(b=>b.re)), maxRe = Math.max(...cb.map(b=>b.re));
+  const minSt = Math.min(...cb.map(b=>b.st)), maxSt = Math.max(...cb.map(b=>b.st));
+  const W=280, H=240, P=36;
+  return React.createElement("div", null,
+    React.createElement("div", {style:{fontSize:8,color:"#4b5563",marginBottom:8,fontFamily:"'JetBrains Mono',monospace"}},
+      "Stack (Y) vs. Reach (X) · Blasengröße = S/R-Ratio"),
+    React.createElement("div", {style:{position:"relative",height:H+P*2,background:"#0c1018",borderRadius:10,border:"1px solid #1a1f2e",overflow:"hidden"}},
+      React.createElement("svg", {style:{position:"absolute",inset:0,width:"100%",height:"100%"},viewBox:`0 0 ${W+P*2} ${H+P*2}`,preserveAspectRatio:"none"},
+        React.createElement("line",{x1:P,y1:P,x2:P,y2:H+P,stroke:"#1f2937",strokeWidth:1}),
+        React.createElement("line",{x1:P,y1:H+P,x2:W+P,y2:H+P,stroke:"#1f2937",strokeWidth:1}),
+        React.createElement("text",{x:(W+P*2)/2,y:H+P*2-2,textAnchor:"middle",fill:"#374151",fontSize:9},"← Reach (Race / Endurance →)"),
+        React.createElement("text",{x:10,y:H/2+P,textAnchor:"middle",fill:"#374151",fontSize:9,transform:`rotate(-90,10,${H/2+P})`},"Stack (mm)")
+      ),
+      cb.map(b => {
+        const xPct = maxRe===minRe ? 0.5 : (b.re-minRe)/(maxRe-minRe);
+        const yPct = maxSt===minSt ? 0.5 : (b.st-minSt)/(maxSt-minSt);
+        const left = `calc(${P}px + ${xPct*100}% * ${W}/${W+P*2})`;
+        const top = `calc(${P}px + ${(1-yPct)*100}% * ${H}/${H+P*2})`;
+        const r = Math.round(7 + (b.sr-1.38)/0.22*9);
+        return React.createElement("div", {
+          key:b.id,
+          title:`${b.n}: Stack ${b.st} / Reach ${b.re} / S/R ${b.sr.toFixed(2)}`,
+          style:{
+            position:"absolute",
+            left:`${P + xPct*W - r}px`,
+            top:`${P + (1-yPct)*H - r}px`,
+            width:r*2,height:r*2,borderRadius:"50%",
+            background:b.col,opacity:.85,
+            display:"flex",alignItems:"center",justifyContent:"center",
+            flexShrink:0,cursor:"default"
+          }
+        },
+          React.createElement("span",{style:{fontSize:Math.max(6,r>10?8:6),color:"#000",fontWeight:700,fontFamily:"monospace",pointerEvents:"none",lineHeight:1}},
+            b.n.split(" ").slice(-1)[0].substring(0,3))
+        );
+      })
+    ),
+    React.createElement("div",{style:{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}},
+      cb.map(b => React.createElement("div",{key:b.id,style:{display:"flex",alignItems:"center",gap:3}},
+        React.createElement("div",{style:{width:8,height:8,borderRadius:"50%",background:b.col,flexShrink:0}}),
+        React.createElement("span",{style:{fontSize:7,color:"#4b5563",fontFamily:"monospace"}},
+          b.n.split(" ").slice(-1)[0]+" S"+b.st+"/R"+b.re)
+      ))
+    )
+  );
 }
-function RadarView({ bikes }) {
-  const AX = ["P/L", "Komponenten", "Aero", "Vielseit.", "Komfort", "H\xE4ndler"];
-  const [act, setAct] = useState(bikes.filter((b) => b.carbon && b.bew >= 8).map((b) => b.id));
-  const data = AX.map((ax) => {
-    const p = { ax };
-    bikes.forEach((b) => {
-      p[b.id] = radarPt(b, ax);
-    });
-    return p;
-  });
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 } }, bikes.filter((b) => b.carbon).map((b) => /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      key: b.id,
-      onClick: () => setAct((p) => p.includes(b.id) ? p.filter((x) => x !== b.id) : [...p, b.id]),
-      style: {
-        padding: "3px 9px",
-        borderRadius: 20,
-        border: "1px solid",
-        borderColor: act.includes(b.id) ? b.col : "#1f2937",
-        background: act.includes(b.id) ? `${b.col}15` : "transparent",
-        color: act.includes(b.id) ? b.col : "#374151",
-        fontSize: 8,
-        cursor: "pointer",
-        fontFamily: "'JetBrains Mono',monospace"
-      }
-    },
-    b.n.split(" ").slice(-1)[0]
-  ))), /* @__PURE__ */ React.createElement("div", { style: { height: 300 } }, /* @__PURE__ */ React.createElement(ResponsiveContainer, { width: "100%", height: "100%" }, /* @__PURE__ */ React.createElement(RadarChart, { data }, /* @__PURE__ */ React.createElement(PolarGrid, { stroke: "#1a1f2e" }), /* @__PURE__ */ React.createElement(PolarAngleAxis, { dataKey: "ax", tick: { fill: "#4b5563", fontSize: 8, fontFamily: "monospace" } }), bikes.filter((b) => act.includes(b.id)).map((b) => /* @__PURE__ */ React.createElement(Radar, { key: b.id, dataKey: b.id, stroke: b.col, fill: b.col, fillOpacity: 0.07, strokeWidth: 1.5 }))))));
+function RadarView({bikes}) {
+  const cb = bikes.filter(b => b.carbon);
+  const axes = ["P/L","Komponenten","Aero","Vielseit.","Komfort","Händler"];
+  const [act, setAct] = useState(cb.filter(b=>b.bew>=8).map(b=>b.id));
+  const toggle = id => setAct(p => p.includes(id) ? p.filter(x=>x!==id) : [...p,id]);
+  const activeBikes = cb.filter(b => act.includes(b.id));
+  const N = axes.length;
+  const SIZE = 120;
+  const CX = SIZE+24, CY = SIZE+20;
+  const toXY = (val, i) => {
+    const a = (i/N)*Math.PI*2 - Math.PI/2;
+    const r = (val/100)*(SIZE-20);
+    return [CX + Math.cos(a)*r, CY + Math.sin(a)*r];
+  };
+  return React.createElement("div", null,
+    React.createElement("div", {style:{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}},
+      cb.map(b => React.createElement("button", {
+        key:b.id, onClick:()=>toggle(b.id),
+        style:{padding:"3px 9px",borderRadius:20,border:"1px solid",
+          borderColor:act.includes(b.id)?b.col:"#1f2937",
+          background:act.includes(b.id)?b.col+"18":"transparent",
+          color:act.includes(b.id)?b.col:"#374151",fontSize:8,cursor:"pointer",
+          fontFamily:"'JetBrains Mono',monospace"}
+      }, b.n.split(" ").slice(-1)[0]))
+    ),
+    React.createElement("div", {style:{width:"100%",overflow:"hidden"}},
+      React.createElement("svg", {
+        viewBox:`0 0 ${CX*2} ${CY*2}`,
+        style:{width:"100%",maxWidth:320,height:"auto",display:"block",margin:"0 auto"}
+      },
+        // Grid rings
+        [0.25,0.5,0.75,1].map(s =>
+          React.createElement("polygon", {
+            key:s,
+            points: axes.map((_,i)=>{const [x,y]=toXY(100*s,i);return `${x},${y}`;}).join(" "),
+            fill:"none",stroke:"#1a1f2e",strokeWidth:1
+          })
+        ),
+        // Axis lines + labels
+        axes.map((ax,i) => {
+          const [x,y] = toXY(100,i);
+          const [lx,ly] = toXY(115,i);
+          return React.createElement("g", {key:ax},
+            React.createElement("line",{x1:CX,y1:CY,x2:x,y2:y,stroke:"#1a1f2e",strokeWidth:1}),
+            React.createElement("text",{x:lx,y:ly,textAnchor:lx>CX+5?"start":lx<CX-5?"end":"middle",
+              dominantBaseline:ly<CY-5?"auto":ly>CY+5?"hanging":"middle",
+              fill:"#4b5563",fontSize:8},ax)
+          );
+        }),
+        // Data polygons
+        activeBikes.map(b =>
+          React.createElement("polygon", {
+            key:b.id,
+            points: axes.map((ax,i)=>{const [x,y]=toXY(radarPt(b,ax),i);return `${x},${y}`;}).join(" "),
+            fill:b.col, fillOpacity:.12, stroke:b.col, strokeWidth:1.5, strokeLinejoin:"round"
+          })
+        )
+      )
+    )
+  );
 }
 const KALK_OPTS = {
   rahmen: [
@@ -1729,36 +1755,28 @@ function App() {
 }
 
 class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(e) { return { error: e }; }
-  render() {
-    if (this.state.error) {
-      const e = this.state.error;
-      return React.createElement('div', {style:{padding:24,color:"#f87171",fontFamily:"monospace",fontSize:12}},
-        React.createElement('div', {style:{color:"#c8fb00",fontWeight:700,marginBottom:12}}, "Runtime Fehler:"),
-        React.createElement('pre', null, String(e.stack || e.message || e))
-      );
-    }
-    return this.props.children;
-  }
-}
-ReactDOM.createRoot(document.getElementById('root')).render(
-  React.createElement(ErrorBoundary, null, React.createElement(App, null))
+constructor(props) { super(props); this.state = { error: null }; }
+static getDerivedStateFromError(e) { return { error: e }; }
+render() {
+if (this.state.error) {
+const e = this.state.error;
+return React.createElement(“div”, {style:{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12}},
+React.createElement(“div”, {style:{color:”#c8fb00”,fontWeight:700,marginBottom:12}}, “Runtime Fehler:”),
+React.createElement(“pre”, null, String(e.stack || e.message || e))
 );
-document.getElementById('loading').style.display = 'none';
+}
+return this.props.children;
+}
+}
+ReactDOM.createRoot(document.getElementById(“root”)).render(
+React.createElement(ErrorBoundary, null, React.createElement(App, null))
+);
+document.getElementById(“loading”).style.display = “none”;
 
-      } catch(err) {
-        showErr(err.stack || err.message || String(err));
-      }
-    }
-
-    // Load Recharts after React is ready, then start app
-    if (window.React && window.ReactDOM) {
-      loadRecharts(startApp);
-    } else {
-      window.addEventListener('load', function() { loadRecharts(startApp); });
-    }
-  </script>
+} catch(err) {
+showErr(err.stack || err.message || String(err));
+}
+</script>
 
 </body>
 </html>
