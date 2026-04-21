@@ -1769,33 +1769,28 @@ if (el) el.style.display = “none”;
 }
 render() {
 if (this.state.error) {
-var el = document.getElementById(“loading”);
-if (el) el.style.display = “none”;
 const e = this.state.error;
-return React.createElement(“div”, {style:{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12}},
-React.createElement(“div”, {style:{color:”#c8fb00”,fontWeight:700,marginBottom:12}}, “Runtime Fehler:”),
-React.createElement(“pre”, null, String(e.stack || e.message || e))
+return React.createElement(“div”, {style:{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12,background:”#060810”,minHeight:“100vh”}},
+React.createElement(“div”, {style:{color:”#c8fb00”,fontWeight:700,marginBottom:12,fontSize:14}}, “⚠ Runtime Fehler:”),
+React.createElement(“pre”, {style:{color:”#f87171”,fontSize:10,whiteSpace:“pre-wrap”,wordBreak:“break-all”}}, String(e.stack || e.message || e))
 );
 }
 return this.props.children;
 }
 }
-function HideLoading() {
-React.useEffect(function() {
-var el = document.getElementById(“loading”);
-if (el) el.style.display = “none”;
-}, []);
-return null;
-}
-
 ReactDOM.createRoot(document.getElementById(“root”)).render(
-React.createElement(ErrorBoundary, null,
-React.createElement(React.Fragment, null,
-React.createElement(HideLoading, null),
-React.createElement(App, null)
-)
-)
+React.createElement(ErrorBoundary, null, React.createElement(App, null))
 );
+// React 18 renders asynchronously - poll until root has content
+(function checkMounted() {
+var root = document.getElementById(“root”);
+var loading = document.getElementById(“loading”);
+if (root && root.children.length > 0) {
+if (loading) loading.style.display = “none”;
+} else {
+requestAnimationFrame(checkMounted);
+}
+})();
 
 } catch(err) {
 showErr(err.stack || err.message || String(err));
