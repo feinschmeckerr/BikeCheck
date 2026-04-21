@@ -14,8 +14,8 @@
     ::-webkit-scrollbar-thumb{background:#374151;border-radius:2px}
     @keyframes si{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
     input[type=range]{accent-color:#c8fb00}
-    #err{display:none;padding:24px;font-family:monospace}
-    #err h2{color:#c8fb00;margin-bottom:10px}
+    #err{display:none;padding:24px;font-family:monospace;background:#060810;min-height:100vh}
+    #err h2{color:#c8fb00;margin-bottom:10px;font-size:14px}
     #err pre{color:#f87171;font-size:11px;white-space:pre-wrap;word-break:break-all}
     #loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#060810;z-index:9999}
     .sp{width:44px;height:44px;border:3px solid #1a1f2e;border-top-color:#c8fb00;border-radius:50%;animation:spin .8s linear infinite}
@@ -24,38 +24,45 @@
   </style>
 </head>
 <body>
-  <div id="loading"><div class="sp"></div><p>Lade&hellip;</p></div>
+  <div id="loading"><div class="sp"></div><p id="load-p">Lade&hellip;</p></div>
   <div id="err"><h2>&#9888; Fehler</h2><pre id="err-msg"></pre></div>
   <div id="root"></div>
+
+  <!-- Utilities first -->
+
   <script>
-    function showErr(msg){
-      document.getElementById("loading").style.display="none";
-      document.getElementById("err").style.display="block";
-      document.getElementById("err-msg").textContent=String(msg);
-    }
-    // Loading progress feedback
-    var loadMsg = document.querySelector("#loading p");
-    var dots = 0;
-    var loadInterval = setInterval(function() {
-      dots = (dots + 1) % 4;
-      if (loadMsg) loadMsg.textContent = "Lade" + ".".repeat(dots+1);
-    }, 500);
-    // Timeout after 30s
-    setTimeout(function() {
-      clearInterval(loadInterval);
-      if (document.getElementById("loading").style.display !== "none") {
-        showErr("Timeout nach 30s.\n\nVersuche: Seite mit Pull-to-refresh neu laden.\nFalls es weiterhin nicht klappt: JavaScript in Safari aktiviert?");
-      }
-    }, 30000);
+  function showErr(msg) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("err").style.display = "block";
+    document.getElementById("err-msg").textContent = String(msg);
+  }
+  var _dots = 0;
+  var _dotTimer = setInterval(function() {
+    _dots = (_dots + 1) % 4;
+    var el = document.getElementById("load-p");
+    if (el) el.textContent = "Lade" + ".".repeat(_dots + 1);
+  }, 400);
+  function _hideLoading() {
+    clearInterval(_dotTimer);
+    var el = document.getElementById("loading");
+    if (el) el.style.display = "none";
+  }
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" onerror="showErr('FEHLER: React CDN')"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" onerror="showErr('FEHLER: ReactDOM CDN')"></script>
+
+  <!-- React (sync, blocks until loaded) -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"
+    onerror="showErr('CDN Fehler: React konnte nicht geladen werden.')"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"
+    onerror="showErr('CDN Fehler: ReactDOM konnte nicht geladen werden.')"></script>
+
+  <!-- App code: compiled JS OUTSIDE try-catch for Safari compatibility -->
+
   <script>
-  try {
-    if(!window.React)    throw new Error("React nicht geladen");
-    if(!window.ReactDOM) throw new Error("ReactDOM nicht geladen");
-    // Recharts not needed - charts use pure SVG/CSS
-    window.Recharts = window.Recharts || {};
+  if (!window.React || !window.ReactDOM) {
+    showErr("React oder ReactDOM nicht geladen.");
+  } else {
 const { useState, useMemo } = React;
 // Recharts exports - try window.Recharts (UMD global)
 const _RC = window.Recharts || {};
@@ -1768,42 +1775,41 @@ function App() {
   } }, /* @__PURE__ */ React.createElement("strong", null, "[", k, "]"), " ", v.lbl)))));
 }
 
-class ErrorBoundary extends React.Component {
-constructor(props) { super(props); this.state = { error: null }; }
-static getDerivedStateFromError(e) { return { error: e }; }
-componentDidCatch(e) {
-var el = document.getElementById(“loading”);
-if (el) el.style.display = “none”;
-}
-render() {
-if (this.state.error) {
-const e = this.state.error;
-return React.createElement(“div”, {style:{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12,background:”#060810”,minHeight:“100vh”}},
-React.createElement(“div”, {style:{color:”#c8fb00”,fontWeight:700,marginBottom:12,fontSize:14}}, “⚠ Runtime Fehler:”),
-React.createElement(“pre”, {style:{color:”#f87171”,fontSize:10,whiteSpace:“pre-wrap”,wordBreak:“break-all”}}, String(e.stack || e.message || e))
-);
-}
-return this.props.children;
-}
-}
-ReactDOM.createRoot(document.getElementById(“root”)).render(
-React.createElement(ErrorBoundary, null, React.createElement(App, null))
-);
-// React 18 renders asynchronously - poll until root has content
-(function checkMounted() {
-var root = document.getElementById(“root”);
-var loading = document.getElementById(“loading”);
-if (root && root.children.length > 0) {
-if (loading) loading.style.display = “none”;
-} else {
-requestAnimationFrame(checkMounted);
-}
-})();
 
-} catch(err) {
-showErr(err.stack || err.message || String(err));
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e, info) {
+    console.error("React error:", e, info);
+  }
+  render() {
+    if (this.state.error) {
+      const e = this.state.error;
+      return React.createElement("div", {style:{padding:24,color:"#f87171",fontFamily:"monospace",fontSize:12,background:"#060810",minHeight:"100vh"}},
+        React.createElement("div", {style:{color:"#c8fb00",fontWeight:700,marginBottom:12,fontSize:14}}, "⚠ Runtime Fehler:"),
+        React.createElement("pre", {style:{color:"#f87171",fontSize:10,whiteSpace:"pre-wrap",wordBreak:"break-all"}}, String(e.stack || e.message || e))
+      );
+    }
+    return this.props.children;
+  }
 }
-</script>
+
+  // Mount
+  try {
+    var _root = ReactDOM.createRoot(document.getElementById("root"));
+    _root.render(React.createElement(ErrorBoundary, null, React.createElement(App, null)));
+    // Poll for DOM mount
+    (function poll() {
+      var r = document.getElementById("root");
+      if (r && r.firstChild) { _hideLoading(); }
+      else { requestAnimationFrame(poll); }
+    })();
+  } catch(e) {
+    showErr(e.stack || e.message || String(e));
+  }
+  } // end if React loaded
+  </script>
 
 </body>
 </html>
