@@ -33,6 +33,12 @@
       document.getElementById("err").style.display="block";
       document.getElementById("err-msg").textContent=String(msg);
     }
+    // Fallback: if still loading after 10s, something went wrong silently
+    setTimeout(function() {
+      if (document.getElementById("loading").style.display !== "none") {
+        showErr("Timeout: Die App hat sich nicht gemeldet.\n\nMögliche Ursache: JavaScript-Fehler ohne Stack-Trace.\nBitte Seite neu laden (Pull-to-refresh).");
+      }
+    }, 10000);
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" onerror="showErr('FEHLER: React CDN')"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" onerror="showErr('FEHLER: ReactDOM CDN')"></script>
@@ -1757,8 +1763,14 @@ function App() {
 class ErrorBoundary extends React.Component {
 constructor(props) { super(props); this.state = { error: null }; }
 static getDerivedStateFromError(e) { return { error: e }; }
+componentDidCatch(e) {
+var el = document.getElementById(“loading”);
+if (el) el.style.display = “none”;
+}
 render() {
 if (this.state.error) {
+var el = document.getElementById(“loading”);
+if (el) el.style.display = “none”;
 const e = this.state.error;
 return React.createElement(“div”, {style:{padding:24,color:”#f87171”,fontFamily:“monospace”,fontSize:12}},
 React.createElement(“div”, {style:{color:”#c8fb00”,fontWeight:700,marginBottom:12}}, “Runtime Fehler:”),
@@ -1768,10 +1780,22 @@ React.createElement(“pre”, null, String(e.stack || e.message || e))
 return this.props.children;
 }
 }
+function HideLoading() {
+React.useEffect(function() {
+var el = document.getElementById(“loading”);
+if (el) el.style.display = “none”;
+}, []);
+return null;
+}
+
 ReactDOM.createRoot(document.getElementById(“root”)).render(
-React.createElement(ErrorBoundary, null, React.createElement(App, null))
+React.createElement(ErrorBoundary, null,
+React.createElement(React.Fragment, null,
+React.createElement(HideLoading, null),
+React.createElement(App, null)
+)
+)
 );
-document.getElementById(“loading”).style.display = “none”;
 
 } catch(err) {
 showErr(err.stack || err.message || String(err));
