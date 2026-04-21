@@ -1,2 +1,0 @@
-# BikeCheck
-Compare Bikes
