@@ -3,23 +3,30 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Rennrad Kaufanalyse</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:#060810;color:#f1f5f9;font-family:Outfit,system-ui,sans-serif;min-height:100vh}
-    button{cursor:pointer;background:none;border:none;font-family:inherit}
-    ::-webkit-scrollbar{height:4px;width:4px;background:#1a1f2e}
+    html{-webkit-text-size-adjust:100%;height:100%}
+    body{background:#060810;color:#f1f5f9;font-family:Outfit,system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+    button{cursor:pointer;background:none;border:none;font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    ::-webkit-scrollbar{height:3px;width:3px;background:#1a1f2e}
     ::-webkit-scrollbar-thumb{background:#374151;border-radius:2px}
+    .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .scroll-x::-webkit-scrollbar{display:none}
+    input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:#1a1f2e;outline:none;width:100%}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#c8fb00;cursor:pointer}
+    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;-webkit-appearance:none;appearance:none}
     @keyframes si{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-    input[type=range]{accent-color:#c8fb00}
     #err{display:none;padding:24px;font-family:monospace;background:#060810;min-height:100vh}
-    #err h2{color:#c8fb00;margin-bottom:10px;font-size:14px}
+    #err h2{color:#c8fb00;margin-bottom:10px;font-size:16px}
     #err pre{color:#f87171;font-size:11px;white-space:pre-wrap;word-break:break-all}
     #loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#060810;z-index:9999}
-    .sp{width:44px;height:44px;border:3px solid #1a1f2e;border-top-color:#c8fb00;border-radius:50%;animation:spin .8s linear infinite}
-    #loading p{margin-top:14px;color:#4b5563;font-size:12px}
+    .sp{width:48px;height:48px;border:3px solid #1a1f2e;border-top-color:#c8fb00;border-radius:50%;animation:spin .8s linear infinite}
+    #loading p{margin-top:16px;color:#4b5563;font-size:13px;font-family:monospace}
     @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
@@ -28,60 +35,58 @@
   <div id="err"><h2>&#9888; Fehler</h2><pre id="err-msg"></pre></div>
   <div id="root"></div>
 
-  <!-- Utilities first -->
-
   <script>
-  function showErr(msg) {
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("err").style.display = "block";
-    document.getElementById("err-msg").textContent = String(msg);
+  function showErr(msg){
+    document.getElementById("loading").style.display="none";
+    document.getElementById("err").style.display="block";
+    document.getElementById("err-msg").textContent=String(msg);
   }
-  var _dots = 0;
-  var _dotTimer = setInterval(function() {
-    _dots = (_dots + 1) % 4;
-    var el = document.getElementById("load-p");
-    if (el) el.textContent = "Lade" + ".".repeat(_dots + 1);
-  }, 400);
-  function _hideLoading() {
-    clearInterval(_dotTimer);
-    var el = document.getElementById("loading");
-    if (el) el.style.display = "none";
+  function _hideLoading(){
+    var el=document.getElementById("loading");
+    if(el)el.style.display="none";
   }
+  var _d=0,_dt=setInterval(function(){
+    _d=(_d+1)%4;
+    var e=document.getElementById("load-p");
+    if(e)e.textContent="Lade"+".".repeat(_d+1);
+  },400);
+  setTimeout(function(){
+    clearInterval(_dt);
+    if(document.getElementById("loading").style.display!=="none"){
+      showErr("Timeout nach 30s.\n\nBitte Seite neu laden (Pull-to-refresh).");
+    }
+  },30000);
   </script>
 
-  <!-- React (sync, blocks until loaded) -->
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"
-    onerror="showErr('CDN Fehler: React konnte nicht geladen werden.')"></script>
+    onerror="showErr('CDN Fehler: React')"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"
-    onerror="showErr('CDN Fehler: ReactDOM konnte nicht geladen werden.')"></script>
-
-  <!-- App code: compiled JS OUTSIDE try-catch for Safari compatibility -->
+    onerror="showErr('CDN Fehler: ReactDOM')"></script>
 
   <script>
-  if (!window.React || !window.ReactDOM) {
-    showErr("React oder ReactDOM nicht geladen.");
-  } else {
-const { useState, useMemo } = React;
-// Recharts exports - try window.Recharts (UMD global)
-const _RC = window.Recharts || {};
-const RadarChart = _RC.RadarChart;
-const PolarGrid = _RC.PolarGrid;
-const PolarAngleAxis = _RC.PolarAngleAxis;
-const Radar = _RC.Radar;
-const ResponsiveContainer = _RC.ResponsiveContainer;
-const ScatterChart = _RC.ScatterChart;
-const Scatter = _RC.Scatter;
-const XAxis = _RC.XAxis;
-const YAxis = _RC.YAxis;
-const Tooltip = _RC.Tooltip;
-const ZAxis = _RC.ZAxis;
-const Cell = _RC.Cell;
-const BarChart = _RC.BarChart;
-const Bar = _RC.Bar;
-const LabelList = _RC.LabelList;
-const ReferenceLine = _RC.ReferenceLine;
+  if(!window.React||!window.ReactDOM){showErr("React nicht geladen.");}
+  else{
+  window.Recharts=window.Recharts||{};
+import { useState, useMemo } from "react";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ZAxis,
+  Cell,
+  BarChart,
+  Bar,
+  LabelList,
+  ReferenceLine
+} from "recharts";
 const LM = "#c8fb00";
 const TIER = {
   S: { bg: "#021008", bd: "#16a34a", tx: "#4ade80", lbl: "Carbon Premium" },
@@ -106,6 +111,7 @@ const total = (b, pm) => b.ang + b.upg + SATTEL + (pm && !b.pm ? PM_C : 0);
 const BIKES = [
   {
     id: "rose",
+    short: "Rose Blend",
     n: "Rose Blend",
     var: "Road 105 Di2",
     char: "Endurance/Allroad",
@@ -154,6 +160,7 @@ const BIKES = [
   },
   {
     id: "canyon",
+    short: "Canyon CF7",
     n: "Canyon Endurace",
     var: "CF 7 AXS",
     char: "Endurance",
@@ -202,6 +209,7 @@ const BIKES = [
   },
   {
     id: "cube_slx",
+    short: "Cube SLX",
     n: "Cube Attain C:62",
     var: "SLX 105 Di2",
     char: "Endurance",
@@ -250,6 +258,7 @@ const BIKES = [
   },
   {
     id: "cube_slt",
+    short: "Cube SLT \u2605",
     n: "Cube Attain C:62",
     var: "SLT Ultegra Di2",
     char: "Endurance",
@@ -298,6 +307,7 @@ const BIKES = [
   },
   {
     id: "tcr1",
+    short: "Giant TCR1",
     n: "Giant TCR Advanced 1",
     var: "105 Di2 (2026)",
     char: "Race",
@@ -346,6 +356,7 @@ const BIKES = [
   },
   {
     id: "addict40",
+    short: "Addict 40",
     n: "Scott Addict 40",
     var: "105 Di2 (2025)",
     char: "Endurance",
@@ -394,6 +405,7 @@ const BIKES = [
   },
   {
     id: "spire",
+    short: "Spire 8.0",
     n: "Radon Spire",
     var: "Carbon 8.0 105 Di2",
     char: "Race (aggressiv)",
@@ -442,6 +454,7 @@ const BIKES = [
   },
   {
     id: "foil30",
+    short: "Foil RC30",
     n: "Scott Foil RC 30",
     var: "SRAM Rival AXS (2025)",
     char: "Aero-Race",
@@ -490,6 +503,7 @@ const BIKES = [
   },
   {
     id: "vaillant",
+    short: "Vaillant",
     n: "Radon Vaillant",
     var: "8.0 Aero 105 Di2",
     char: "Aero-Race",
@@ -538,6 +552,7 @@ const BIKES = [
   },
   {
     id: "ktm",
+    short: "KTM Elite",
     n: "KTM Revelator",
     var: "Alto Elite 105 Di2 (2026)",
     char: "Sport-Endurance",
@@ -586,6 +601,7 @@ const BIKES = [
   },
   {
     id: "merida",
+    short: "Scultura",
     n: "Merida Scultura 6000",
     var: "105 Di2 CF3 (2025)",
     char: "Race",
@@ -634,6 +650,7 @@ const BIKES = [
   },
   {
     id: "orbea",
+    short: "Orca M30i",
     n: "Orbea Orca M30i",
     var: "105 Di2 (2025)",
     char: "Race/Climbing",
@@ -682,6 +699,7 @@ const BIKES = [
   },
   {
     id: "oltre",
+    short: "Oltre Race",
     n: "Bianchi Oltre Race",
     var: "105 Di2 (2025)",
     char: "Aero-Race",
@@ -730,6 +748,7 @@ const BIKES = [
   },
   {
     id: "sprint",
+    short: "Sprint ICR",
     n: "Bianchi Sprint ICR",
     var: "105 Di2 (2025)",
     char: "Race",
@@ -778,6 +797,7 @@ const BIKES = [
   },
   {
     id: "tcr0",
+    short: "TCR Adv.0",
     n: "Giant TCR Advanced 0",
     var: "Ultegra Di2 (2023 Restb.)",
     char: "Race",
@@ -826,6 +846,7 @@ const BIKES = [
   },
   {
     id: "izalco",
+    short: "Izalco 8.9",
     n: "Focus Izalco Max 8.9",
     var: "R7150 Di2 (2024/25)",
     char: "Race/Aero",
@@ -874,6 +895,7 @@ const BIKES = [
   },
   {
     id: "ktm_master",
+    short: "KTM Master",
     n: "KTM Revelator Alto Master",
     var: "Ultegra Di2 (2026)",
     char: "Sport-Endurance",
@@ -922,6 +944,7 @@ const BIKES = [
   },
   {
     id: "lapierre",
+    short: "Lapierre",
     n: "Lapierre Pulsium 7.0",
     var: "Ultegra Di2 (2025)",
     char: "Endurance",
@@ -1007,7 +1030,7 @@ function Badge({ children, bg, bd, tx }) {
 }
 function TierTag({ t, sm }) {
   const c = TIER[t];
-  return /* @__PURE__ */ React.createElement("span", { style: {
+  return /* @__PURE__ */ React.createElement("span", { title: `[${t}] ${c.lbl}`, style: {
     fontSize: sm ? 8 : 9,
     padding: sm ? "1px 5px" : "2px 7px",
     borderRadius: 4,
@@ -1016,7 +1039,8 @@ function TierTag({ t, sm }) {
     color: c.tx,
     fontFamily: "'JetBrains Mono',monospace",
     fontWeight: 700,
-    flexShrink: 0
+    flexShrink: 0,
+    cursor: "help"
   } }, "[", t, "]");
 }
 function ScoreBox({ v }) {
@@ -1117,42 +1141,69 @@ function Card({ b, highlighted, expanded, onExpand, onFav, fav, onVs, inVs, inkl
     { l: "Gewicht", v: `${b.gew} kg`, c: "#e2e8f0" },
     { l: "Stack", v: `${b.st} mm`, c: "#e2e8f0" },
     { l: "Berg-Ratio", v: b.minU.toFixed(2), c: b.minU > 1.1 ? "#f87171" : b.minU <= 1 ? "#4ade80" : "#fde047" }
-  ].map((m) => /* @__PURE__ */ React.createElement("div", { key: m.l, style: { background: "#0c1018", borderRadius: 6, padding: "5px 7px", border: "1px solid #1a1f2e" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7, color: "#2d3748", textTransform: "uppercase", letterSpacing: 1 } }, m.l), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 800, color: m.c } }, m.v))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 5, marginTop: 9 } }, /* @__PURE__ */ React.createElement("button", { onClick: () => onFav(b.id), style: {
-    width: 34,
-    height: 30,
-    borderRadius: 7,
-    border: "1px solid",
-    borderColor: fav ? LM : "#1f2937",
-    background: fav ? "#1a2200" : "#0d1117",
-    color: fav ? LM : "#374151",
-    fontSize: 14,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
-  } }, fav ? "\u2605" : "\u2606"), /* @__PURE__ */ React.createElement("button", { onClick: () => onVs(b.id), style: {
-    width: 34,
-    height: 30,
-    borderRadius: 7,
-    border: "1px solid",
-    borderColor: inVs ? "#6366f1" : "#1f2937",
-    background: inVs ? "#1e1b4b" : "#0d1117",
-    color: inVs ? "#a5b4fc" : "#374151",
-    fontSize: 9,
-    fontFamily: "'JetBrains Mono',monospace",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
-  } }, "VS"), /* @__PURE__ */ React.createElement("button", { onClick: () => onExpand(b.id), style: {
-    flex: 1,
-    height: 30,
-    border: "1px solid #1a1f2e",
-    borderRadius: 7,
-    background: "transparent",
-    color: "#374151",
-    fontSize: 9,
-    fontFamily: "'JetBrains Mono',monospace",
-    cursor: "pointer"
-  } }, expanded ? "\u25B2 zuklappen" : "\u25BC Details \xB7 Fit-Check")), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 9, display: "flex", flexDirection: "column", gap: 7, borderTop: "1px solid #1a1f2e", paddingTop: 9 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#0c1018", borderRadius: 8, padding: "9px 10px", border: `1px solid ${fc.pct >= 85 ? LM : "#1a1f2e"}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7, color: "#374151", textTransform: "uppercase", letterSpacing: 1.5 } }, "Profil-Match (Clemens)"), /* @__PURE__ */ React.createElement("div", { style: {
+  ].map((m) => /* @__PURE__ */ React.createElement("div", { key: m.l, style: { background: "#0c1018", borderRadius: 6, padding: "5px 7px", border: "1px solid #1a1f2e" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7, color: "#2d3748", textTransform: "uppercase", letterSpacing: 1 } }, m.l), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 800, color: m.c } }, m.v))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 7, marginTop: 9, alignItems: "center" } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => onFav(b.id),
+      style: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        border: "1px solid",
+        flexShrink: 0,
+        borderColor: fav ? LM : "#1f2937",
+        background: fav ? "#1a2200" : "#0d1117",
+        color: fav ? LM : "#374151",
+        fontSize: 20,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        touchAction: "manipulation"
+      }
+    },
+    fav ? "\u2605" : "\u2606"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => onVs(b.id),
+      style: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        border: "1px solid",
+        flexShrink: 0,
+        borderColor: inVs ? "#6366f1" : "#1f2937",
+        background: inVs ? "#1e1b4b" : "#0d1117",
+        color: inVs ? "#a5b4fc" : "#374151",
+        fontSize: 10,
+        fontFamily: "'JetBrains Mono',monospace",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 700,
+        touchAction: "manipulation"
+      }
+    },
+    "VS"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => onExpand(b.id),
+      style: {
+        flex: 1,
+        height: 44,
+        border: "1px solid #1a1f2e",
+        borderRadius: 10,
+        background: "#0d1117",
+        color: "#6b7280",
+        fontSize: 10,
+        fontFamily: "'JetBrains Mono',monospace",
+        cursor: "pointer",
+        touchAction: "manipulation"
+      }
+    },
+    expanded ? "\u25B2 Schlie\xDFen" : "\u25BC Details \xB7 Fit-Check"
+  )), expanded && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 9, display: "flex", flexDirection: "column", gap: 7, borderTop: "1px solid #1a1f2e", paddingTop: 9 } }, /* @__PURE__ */ React.createElement("div", { style: { background: "#0c1018", borderRadius: 8, padding: "9px 10px", border: `1px solid ${fc.pct >= 85 ? LM : "#1a1f2e"}` } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7, color: "#374151", textTransform: "uppercase", letterSpacing: 1.5 } }, "Profil-Match (Clemens)"), /* @__PURE__ */ React.createElement("div", { style: {
     fontFamily: "'JetBrains Mono',monospace",
     fontSize: 12,
     fontWeight: 800,
@@ -1161,7 +1212,8 @@ function Card({ b, highlighted, expanded, onExpand, onFav, fav, onVs, inVs, inkl
 }
 function CompareView({ ids, inkl_pm }) {
   const bs = ids.map((id) => BIKES.find((b) => b.id === id)).filter(Boolean);
-  if (bs.length < 2) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 50, color: "#374151", fontSize: 11, fontFamily: "'JetBrains Mono',monospace" } }, "W\xE4hle 2 R\xE4der mit dem ", /* @__PURE__ */ React.createElement("strong", { style: { color: "#a5b4fc" } }, "VS"), "-Button aus \u2014 dann hier vergleichen.");
+  if (bs.length === 0) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 40, color: "#374151", fontSize: 11, fontFamily: "'JetBrains Mono',monospace" } }, "Tippe auf ", /* @__PURE__ */ React.createElement("strong", { style: { color: "#a5b4fc", fontSize: 14 } }, "VS"), " auf zwei Karten um sie zu vergleichen.");
+  if (bs.length === 1) return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 40 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#4b5563", marginBottom: 16, fontFamily: "'JetBrains Mono',monospace" } }, /* @__PURE__ */ React.createElement("strong", { style: { color: bs[0].col } }, bs[0].short), " ausgew\xE4hlt."), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#374151", fontFamily: "'JetBrains Mono',monospace" } }, "W\xE4hle ein zweites Rad mit ", /* @__PURE__ */ React.createElement("strong", { style: { color: "#a5b4fc" } }, "VS"), " aus."));
   const [a, bb] = bs;
   const fcA = fitCheck(a, inkl_pm), fcB = fitCheck(bb, inkl_pm);
   const TA = total(a, inkl_pm), TB = total(bb, inkl_pm);
@@ -1259,150 +1311,154 @@ function HaendlerView() {
     marginBottom: 6
   } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700, color: "#e2e8f0" } }, item.bike), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: g.color, marginTop: 2 } }, item.haendler), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563", marginTop: 1 } }, item.addr), item.tel && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563" } }, item.tel))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 6, fontSize: 9, color: "#6b7280", lineHeight: 1.4 } }, item.note))))));
 }
-function KostenView({bikes, inkl_pm}) {
-  const sorted = [...bikes].sort((a,b) => total(a,inkl_pm) - total(b,inkl_pm));
-  const maxVal = Math.max(...sorted.map(b => total(b,inkl_pm)));
-  return React.createElement("div", null,
-    React.createElement("div", {style:{fontSize:8,color:"#4b5563",marginBottom:14,fontFamily:"'JetBrains Mono',monospace"}},
-      "Angebot + Sattel 65€ + LR-Upgrade + PM (wenn aktiviert) = Gesamtkosten"),
-    sorted.map((b) => {
-      const T = total(b, inkl_pm);
-      const pctBasis = Math.round(b.ang / maxVal * 100);
-      const pctSat = Math.round(65 / maxVal * 100);
-      const pctUpg = Math.round(b.upg / maxVal * 100);
-      const pctPm = Math.round((inkl_pm && !b.pm ? 313 : 0) / maxVal * 100);
-      return React.createElement("div", {key:b.id, style:{marginBottom:10}},
-        React.createElement("div", {style:{display:"flex",justifyContent:"space-between",marginBottom:3}},
-          React.createElement("span", {style:{fontSize:9,color:b.col,fontFamily:"'JetBrains Mono',monospace",fontWeight:700}}, b.n.split(" ").pop()),
-          React.createElement("span", {style:{fontSize:9,color:"#9ca3af",fontFamily:"'JetBrains Mono',monospace"}}, T.toLocaleString("de-DE") + "€")
-        ),
-        React.createElement("div", {style:{height:16,background:"#1a1f2e",borderRadius:4,overflow:"hidden",display:"flex"}},
-          React.createElement("div", {style:{width:pctBasis+"%",background:b.col,opacity:.9}}),
-          React.createElement("div", {style:{width:pctSat+"%",background:"#374151"}}),
-          React.createElement("div", {style:{width:pctUpg+"%",background:"#ea580c"}}),
-          React.createElement("div", {style:{width:pctPm+"%",background:"#3b82f6"}})
-        )
-      );
-    }),
-    React.createElement("div", {style:{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}},
-      [["Angebot","#6b7280"],["Sattel +65€","#374151"],["LR-Upgrade","#ea580c"],["Powermeter","#3b82f6"]].map(([l,c]) =>
-        React.createElement("div", {key:l, style:{display:"flex",alignItems:"center",gap:4}},
-          React.createElement("div", {style:{width:10,height:10,borderRadius:2,background:c}}),
-          React.createElement("span", {style:{fontSize:8,color:"#6b7280"}}, l)
-        )
-      )
-    )
-  );
+function KostenView({ bikes, inkl_pm }) {
+  const sorted = [...bikes].sort((a, b) => total(a, inkl_pm) - total(b, inkl_pm));
+  const maxT = Math.max(...sorted.map((b) => total(b, inkl_pm)));
+  const [tip, setTip] = useState(null);
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: "#4b5563", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" } }, "Angebot + Sattel 65\u20AC + LR-Upgrade + PM \u2192 Gesamtkosten"), sorted.map((b) => {
+    const T = total(b, inkl_pm);
+    const pm2 = inkl_pm && !b.pm ? PM_C : 0;
+    const pBasis = Math.round(b.ang / maxT * 100);
+    const pSat = Math.round(SATTEL / maxT * 100);
+    const pUpg = Math.round(b.upg / maxT * 100);
+    const pPm = Math.round(pm2 / maxT * 100);
+    const sav = b.uvp > b.ang ? Math.round((b.uvp - b.ang) / b.uvp * 100) : 0;
+    return /* @__PURE__ */ React.createElement("div", { key: b.id, style: { marginBottom: 10 }, onClick: () => setTip(tip === b.id ? null : b.id) }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 8, height: 8, borderRadius: "50%", background: b.col, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: b.col, fontFamily: "'JetBrains Mono',monospace" } }, b.short), sav > 0 && /* @__PURE__ */ React.createElement("span", { style: { fontSize: 8, padding: "1px 5px", borderRadius: 3, background: "#052e16", color: "#4ade80", border: "1px solid #16a34a44" } }, "\u2212", sav, "%")), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, color: "#f1f5f9", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" } }, T.toLocaleString("de-DE"), " \u20AC")), /* @__PURE__ */ React.createElement("div", { style: { height: 20, background: "#1a1f2e", borderRadius: 4, overflow: "hidden", display: "flex", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { width: pBasis + "%", background: b.col, opacity: 0.9, transition: "width .5s" } }), /* @__PURE__ */ React.createElement("div", { style: { width: pSat + "%", background: "#374151" } }), /* @__PURE__ */ React.createElement("div", { style: { width: pUpg + "%", background: "#ea580c" } }), /* @__PURE__ */ React.createElement("div", { style: { width: pPm + "%", background: "#3b82f6" } })), tip === b.id && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 4, padding: "6px 10px", background: "#0c1018", borderRadius: 6, border: `1px solid ${b.col}33` } }, [
+      ["Angebot", b.ang, b.col],
+      ["Sattel (Fizik Argo)", SATTEL, "#374151"],
+      ["LR-Upgrade", b.upg, "#ea580c"],
+      ["Powermeter", pm2, "#3b82f6"]
+    ].map(([l, v, c]) => v > 0 && /* @__PURE__ */ React.createElement("div", { key: l, style: { display: "flex", justifyContent: "space-between", fontSize: 9, marginBottom: 2 } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#6b7280", display: "flex", alignItems: "center", gap: 5 } }, /* @__PURE__ */ React.createElement("span", { style: { width: 8, height: 8, borderRadius: 2, background: c, display: "inline-block" } }), l), /* @__PURE__ */ React.createElement("span", { style: { color: "#f1f5f9", fontFamily: "'JetBrains Mono',monospace" } }, v.toLocaleString("de-DE"), " \u20AC")))));
+  }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 } }, [["Angebot", "#6b7280"], ["Sattel +65\u20AC", "#374151"], ["LR-Upgrade", "#ea580c"], ["Powermeter", "#3b82f6"]].map(([l, c]) => /* @__PURE__ */ React.createElement("div", { key: l, style: { display: "flex", alignItems: "center", gap: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 10, height: 10, borderRadius: 2, background: c, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, color: "#6b7280" } }, l)))));
 }
-function GeometryView({bikes}) {
-  const cb = bikes.filter(b => b.carbon);
-  if (!cb.length) return React.createElement("div", {style:{color:"#4b5563",padding:20}}, "Keine Carbon-Räder.");
-  const minRe = Math.min(...cb.map(b=>b.re)), maxRe = Math.max(...cb.map(b=>b.re));
-  const minSt = Math.min(...cb.map(b=>b.st)), maxSt = Math.max(...cb.map(b=>b.st));
-  const W=280, H=240, P=36;
-  return React.createElement("div", null,
-    React.createElement("div", {style:{fontSize:8,color:"#4b5563",marginBottom:8,fontFamily:"'JetBrains Mono',monospace"}},
-      "Stack (Y) vs. Reach (X) · Blasengröße = S/R-Ratio"),
-    React.createElement("div", {style:{position:"relative",height:H+P*2,background:"#0c1018",borderRadius:10,border:"1px solid #1a1f2e",overflow:"hidden"}},
-      React.createElement("svg", {style:{position:"absolute",inset:0,width:"100%",height:"100%"},viewBox:`0 0 ${W+P*2} ${H+P*2}`,preserveAspectRatio:"none"},
-        React.createElement("line",{x1:P,y1:P,x2:P,y2:H+P,stroke:"#1f2937",strokeWidth:1}),
-        React.createElement("line",{x1:P,y1:H+P,x2:W+P,y2:H+P,stroke:"#1f2937",strokeWidth:1}),
-        React.createElement("text",{x:(W+P*2)/2,y:H+P*2-2,textAnchor:"middle",fill:"#374151",fontSize:9},"← Reach (Race / Endurance →)"),
-        React.createElement("text",{x:10,y:H/2+P,textAnchor:"middle",fill:"#374151",fontSize:9,transform:`rotate(-90,10,${H/2+P})`},"Stack (mm)")
-      ),
-      cb.map(b => {
-        const xPct = maxRe===minRe ? 0.5 : (b.re-minRe)/(maxRe-minRe);
-        const yPct = maxSt===minSt ? 0.5 : (b.st-minSt)/(maxSt-minSt);
-        const left = `calc(${P}px + ${xPct*100}% * ${W}/${W+P*2})`;
-        const top = `calc(${P}px + ${(1-yPct)*100}% * ${H}/${H+P*2})`;
-        const r = Math.round(7 + (b.sr-1.38)/0.22*9);
-        return React.createElement("div", {
-          key:b.id,
-          title:`${b.n}: Stack ${b.st} / Reach ${b.re} / S/R ${b.sr.toFixed(2)}`,
-          style:{
-            position:"absolute",
-            left:`${P + xPct*W - r}px`,
-            top:`${P + (1-yPct)*H - r}px`,
-            width:r*2,height:r*2,borderRadius:"50%",
-            background:b.col,opacity:.85,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            flexShrink:0,cursor:"default"
-          }
-        },
-          React.createElement("span",{style:{fontSize:Math.max(6,r>10?8:6),color:"#000",fontWeight:700,fontFamily:"monospace",pointerEvents:"none",lineHeight:1}},
-            b.n.split(" ").slice(-1)[0].substring(0,3))
-        );
-      })
-    ),
-    React.createElement("div",{style:{display:"flex",flexWrap:"wrap",gap:5,marginTop:8}},
-      cb.map(b => React.createElement("div",{key:b.id,style:{display:"flex",alignItems:"center",gap:3}},
-        React.createElement("div",{style:{width:8,height:8,borderRadius:"50%",background:b.col,flexShrink:0}}),
-        React.createElement("span",{style:{fontSize:7,color:"#4b5563",fontFamily:"monospace"}},
-          b.n.split(" ").slice(-1)[0]+" S"+b.st+"/R"+b.re)
-      ))
-    )
-  );
-}
-function RadarView({bikes}) {
-  const cb = bikes.filter(b => b.carbon);
-  const axes = ["P/L","Komponenten","Aero","Vielseit.","Komfort","Händler"];
-  const [act, setAct] = useState(cb.filter(b=>b.bew>=8).map(b=>b.id));
-  const toggle = id => setAct(p => p.includes(id) ? p.filter(x=>x!==id) : [...p,id]);
-  const activeBikes = cb.filter(b => act.includes(b.id));
-  const N = axes.length;
-  const SIZE = 120;
-  const CX = SIZE+24, CY = SIZE+20;
-  const toXY = (val, i) => {
-    const a = (i/N)*Math.PI*2 - Math.PI/2;
-    const r = (val/100)*(SIZE-20);
-    return [CX + Math.cos(a)*r, CY + Math.sin(a)*r];
-  };
-  return React.createElement("div", null,
-    React.createElement("div", {style:{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}},
-      cb.map(b => React.createElement("button", {
-        key:b.id, onClick:()=>toggle(b.id),
-        style:{padding:"3px 9px",borderRadius:20,border:"1px solid",
-          borderColor:act.includes(b.id)?b.col:"#1f2937",
-          background:act.includes(b.id)?b.col+"18":"transparent",
-          color:act.includes(b.id)?b.col:"#374151",fontSize:8,cursor:"pointer",
-          fontFamily:"'JetBrains Mono',monospace"}
-      }, b.n.split(" ").slice(-1)[0]))
-    ),
-    React.createElement("div", {style:{width:"100%",overflow:"hidden"}},
-      React.createElement("svg", {
-        viewBox:`0 0 ${CX*2} ${CY*2}`,
-        style:{width:"100%",maxWidth:320,height:"auto",display:"block",margin:"0 auto"}
+function GeometryView({ bikes }) {
+  const cb = bikes.filter((b) => b.carbon);
+  const [hov, setHov] = useState(null);
+  if (!cb.length) return /* @__PURE__ */ React.createElement("div", { style: { color: "#4b5563", padding: 20 } }, "Keine Carbon-R\xE4der ausgew\xE4hlt.");
+  const RE_MIN = 370, RE_MAX = 402, ST_MIN = 522, ST_MAX = 605;
+  const W = 300, H = 260, PL = 38, PR = 16, PT = 16, PB = 32;
+  const toSVG = (re, st) => ({
+    x: PL + (re - RE_MIN) / (RE_MAX - RE_MIN) * W,
+    y: PT + H - (st - ST_MIN) / (ST_MAX - ST_MIN) * H
+  });
+  const xTicks = [375, 380, 385, 390, 395, 400];
+  const yTicks = [530, 545, 560, 575, 590, 605];
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9, color: "#4b5563", marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" } }, "Reach (X) vs. Stack (Y) \xB7 Blasengr\xF6\xDFe = S/R-Ratio \xB7 Gr. M / 181cm"), /* @__PURE__ */ React.createElement("div", { style: { background: "#0c1018", borderRadius: 10, border: "1px solid #1a1f2e", padding: "8px 0 0" } }, /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${W + PL + PR} ${H + PT + PB}`, style: { width: "100%", height: "auto", display: "block" } }, xTicks.map((v) => {
+    const x = PL + (v - RE_MIN) / (RE_MAX - RE_MIN) * W;
+    return /* @__PURE__ */ React.createElement("g", { key: v }, /* @__PURE__ */ React.createElement("line", { x1: x, y1: PT, x2: x, y2: PT + H, stroke: "#1a1f2e", strokeWidth: 1 }), /* @__PURE__ */ React.createElement("text", { x, y: PT + H + 12, textAnchor: "middle", fill: "#374151", fontSize: 7 }, v));
+  }), yTicks.map((v) => {
+    const y = PT + H - (v - ST_MIN) / (ST_MAX - ST_MIN) * H;
+    return /* @__PURE__ */ React.createElement("g", { key: v }, /* @__PURE__ */ React.createElement("line", { x1: PL, y1: y, x2: PL + W, y2: y, stroke: "#1a1f2e", strokeWidth: 1 }), /* @__PURE__ */ React.createElement("text", { x: PL - 4, y: y + 3, textAnchor: "end", fill: "#374151", fontSize: 7 }, v));
+  }), /* @__PURE__ */ React.createElement("line", { x1: PL + (384 - RE_MIN) / (RE_MAX - RE_MIN) * W, y1: PT, x2: PL + (384 - RE_MIN) / (RE_MAX - RE_MIN) * W, y2: PT + H, stroke: "#1e3a1e", strokeDasharray: "4 3", strokeWidth: 1 }), /* @__PURE__ */ React.createElement("line", { x1: PL, y1: PT + H - (560 - ST_MIN) / (ST_MAX - ST_MIN) * H, x2: PL + W, y2: PT + H - (560 - ST_MIN) / (ST_MAX - ST_MIN) * H, stroke: "#1e3a1e", strokeDasharray: "4 3", strokeWidth: 1 }), /* @__PURE__ */ React.createElement("text", { x: PL + W / 2, y: PT + H + PB - 2, textAnchor: "middle", fill: "#4b5563", fontSize: 8 }, "\u2190 Reach mm (Race / Endurance \u2192)"), /* @__PURE__ */ React.createElement("text", { x: 10, y: PT + H / 2, textAnchor: "middle", fill: "#4b5563", fontSize: 8, transform: `rotate(-90,10,${PT + H / 2})` }, "Stack mm"), [...cb].sort((a, b) => a.bew - b.bew).map((b) => {
+    const { x, y } = toSVG(b.re, b.st);
+    const r = Math.round(6 + (b.sr - 1.38) / 0.22 * 8);
+    const isHov = hov === b.id;
+    return /* @__PURE__ */ React.createElement(
+      "g",
+      {
+        key: b.id,
+        style: { cursor: "pointer" },
+        onMouseEnter: () => setHov(b.id),
+        onMouseLeave: () => setHov(null),
+        onClick: () => setHov(isHov ? null : b.id)
       },
-        // Grid rings
-        [0.25,0.5,0.75,1].map(s =>
-          React.createElement("polygon", {
-            key:s,
-            points: axes.map((_,i)=>{const [x,y]=toXY(100*s,i);return `${x},${y}`;}).join(" "),
-            fill:"none",stroke:"#1a1f2e",strokeWidth:1
-          })
-        ),
-        // Axis lines + labels
-        axes.map((ax,i) => {
-          const [x,y] = toXY(100,i);
-          const [lx,ly] = toXY(115,i);
-          return React.createElement("g", {key:ax},
-            React.createElement("line",{x1:CX,y1:CY,x2:x,y2:y,stroke:"#1a1f2e",strokeWidth:1}),
-            React.createElement("text",{x:lx,y:ly,textAnchor:lx>CX+5?"start":lx<CX-5?"end":"middle",
-              dominantBaseline:ly<CY-5?"auto":ly>CY+5?"hanging":"middle",
-              fill:"#4b5563",fontSize:8},ax)
-          );
-        }),
-        // Data polygons
-        activeBikes.map(b =>
-          React.createElement("polygon", {
-            key:b.id,
-            points: axes.map((ax,i)=>{const [x,y]=toXY(radarPt(b,ax),i);return `${x},${y}`;}).join(" "),
-            fill:b.col, fillOpacity:.12, stroke:b.col, strokeWidth:1.5, strokeLinejoin:"round"
-          })
-        )
-      )
-    )
-  );
+      /* @__PURE__ */ React.createElement(
+        "circle",
+        {
+          cx: x,
+          cy: y,
+          r: isHov ? r + 3 : r,
+          fill: b.col,
+          opacity: isHov ? 1 : 0.8,
+          stroke: isHov ? "#fff" : "none",
+          strokeWidth: 1.5
+        }
+      ),
+      /* @__PURE__ */ React.createElement(
+        "text",
+        {
+          x,
+          y: y + 3,
+          textAnchor: "middle",
+          fill: "#000",
+          fontSize: Math.max(6, r > 9 ? 8 : 6),
+          fontWeight: "bold",
+          style: { pointerEvents: "none", userSelect: "none" }
+        },
+        b.short.split(" ").pop().substring(0, 4)
+      ),
+      isHov && /* @__PURE__ */ React.createElement("g", null, /* @__PURE__ */ React.createElement("rect", { x: x + r + 4, y: y - 28, width: 130, height: 52, rx: 4, fill: "#0c1018", stroke: b.col, strokeWidth: 1 }), /* @__PURE__ */ React.createElement("text", { x: x + r + 10, y: y - 14, fill: b.col, fontSize: 9, fontWeight: "bold" }, b.short), /* @__PURE__ */ React.createElement("text", { x: x + r + 10, y, fill: "#9ca3af", fontSize: 8 }, "S", b.st, " \xB7 R", b.re, " \xB7 S/R ", b.sr.toFixed(2)), /* @__PURE__ */ React.createElement("text", { x: x + r + 10, y: y + 14, fill: "#6b7280", fontSize: 8 }, b.ang.toLocaleString("de-DE"), " \u20AC \xB7 ", b.bew, "/10"))
+    );
+  }))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8 } }, cb.map((b) => /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      key: b.id,
+      style: { display: "flex", alignItems: "center", gap: 3, cursor: "pointer" },
+      onClick: () => setHov(hov === b.id ? null : b.id)
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { width: 8, height: 8, borderRadius: "50%", background: b.col, border: hov === b.id ? "2px solid #fff" : "none", flexShrink: 0 } }),
+    /* @__PURE__ */ React.createElement("span", { style: { fontSize: 8, color: hov === b.id ? b.col : "#4b5563", fontFamily: "monospace" } }, b.short)
+  ))));
+}
+function RadarView({ bikes }) {
+  const cb = bikes.filter((b) => b.carbon);
+  const AX = ["P/L", "Komponen.", "Aero", "Vielseit.", "Komfort", "H\xE4ndler"];
+  const [act, setAct] = useState(cb.filter((b) => b.bew >= 8).map((b) => b.id));
+  const toggle = (id) => setAct((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+  const actB = cb.filter((b) => act.includes(b.id));
+  const N = AX.length, SIZE = 110, CX = 150, CY = 130;
+  const angle = (i) => i / N * Math.PI * 2 - Math.PI / 2;
+  const pt = (val, i) => {
+    const r = val / 100 * (SIZE - 10);
+    return { x: CX + Math.cos(angle(i)) * r, y: CY + Math.sin(angle(i)) * r };
+  };
+  const ring = (s) => AX.map((_, i) => {
+    const r = (SIZE - 10) * s;
+    return `${CX + Math.cos(angle(i)) * r},${CY + Math.sin(angle(i)) * r}`;
+  }).join(" ");
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 } }, cb.map((b) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: b.id,
+      onClick: () => toggle(b.id),
+      style: {
+        padding: "8px 12px",
+        minHeight: 36,
+        borderRadius: 20,
+        border: "1px solid",
+        borderColor: act.includes(b.id) ? b.col : "#1f2937",
+        background: act.includes(b.id) ? `${b.col}18` : "transparent",
+        color: act.includes(b.id) ? b.col : "#4b5563",
+        fontSize: 9,
+        cursor: "pointer",
+        fontFamily: "'JetBrains Mono',monospace",
+        touchAction: "manipulation"
+      }
+    },
+    b.short
+  ))), /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 300 270`, style: { width: "100%", height: "auto", display: "block" } }, [0.25, 0.5, 0.75, 1].map((s) => /* @__PURE__ */ React.createElement("polygon", { key: s, points: ring(s), fill: "none", stroke: "#1a1f2e", strokeWidth: 1 })), AX.map((ax, i) => {
+    const outerR = SIZE + 4;
+    const lx = CX + Math.cos(angle(i)) * outerR;
+    const ly = CY + Math.sin(angle(i)) * outerR;
+    const ax2 = CX + Math.cos(angle(i)) * (SIZE - 10);
+    const ay2 = CY + Math.sin(angle(i)) * (SIZE - 10);
+    const anchor = lx < CX - 5 ? "end" : lx > CX + 5 ? "start" : "middle";
+    const dy = ly < CY - 5 ? -4 : ly > CY + 5 ? 10 : 4;
+    return /* @__PURE__ */ React.createElement("g", { key: ax }, /* @__PURE__ */ React.createElement("line", { x1: CX, y1: CY, x2: ax2, y2: ay2, stroke: "#1a1f2e", strokeWidth: 1 }), /* @__PURE__ */ React.createElement("text", { x: lx, y: ly + dy, textAnchor: anchor, fill: "#6b7280", fontSize: 8 }, ax));
+  }), actB.map((b) => {
+    const pts = AX.map((_, i) => pt(radarPt(b, AX[i]), i));
+    return /* @__PURE__ */ React.createElement("g", { key: b.id }, /* @__PURE__ */ React.createElement(
+      "polygon",
+      {
+        points: pts.map((p) => `${p.x},${p.y}`).join(" "),
+        fill: b.col,
+        fillOpacity: 0.12,
+        stroke: b.col,
+        strokeWidth: 2,
+        strokeLinejoin: "round"
+      }
+    ), pts.map((p, i) => /* @__PURE__ */ React.createElement("circle", { key: i, cx: p.x, cy: p.y, r: 3, fill: b.col })));
+  })), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 } }, AX.map((ax, i) => /* @__PURE__ */ React.createElement("div", { key: ax, style: { background: "#0c1018", borderRadius: 6, padding: "4px 8px", border: "1px solid #1a1f2e" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#374151", marginBottom: 2 } }, ax), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 3, flexWrap: "wrap" } }, [...actB].sort((a, b2) => radarPt(b2, AX[i]) - radarPt(a, AX[i])).slice(0, 3).map((b) => /* @__PURE__ */ React.createElement("span", { key: b.id, style: { fontSize: 7, color: b.col, fontFamily: "monospace" } }, b.short.split(" ").pop().substring(0, 4))))))));
 }
 const KALK_OPTS = {
   rahmen: [
@@ -1445,18 +1501,23 @@ const KALK_BASE = 2300;
 function matchScore(bike, cfg) {
   let score = 0;
   const rTier = { alu: 0, c_std: 1, c_pre: 2, c_aero: 3 }[cfg.rahmen] || 1;
-  const bTier = bike.carbon ? bike.col === "#6366f1" || bike.col === "#ec4899" || bike.col === "#d97706" && bike.rg === 1050 ? 3 : 1 : 0;
-  score += Math.max(0, 3 - Math.abs(rTier - bTier)) * 10;
-  if (cfg.schaltung === bike.sK) score += 25;
-  else if ((cfg.schaltung === "di2" || cfg.schaltung === "ultegra") && (bike.sK === "di2" || bike.sK === "ultegra")) score += 10;
-  const lrMap = { D: 0, C: 1, B: 2, A: 3, S30: 4, S50: 5 };
-  const bikeLr = { D: 0, C: 1, B: 2, A: 3, S: 4 }[bike.lrT] || 2;
-  const cfgLr = lrMap[cfg.laufrad] || 2;
-  score += Math.max(0, 5 - Math.abs(cfgLr - bikeLr)) * 6;
-  const rTierMap = { D: 0, C: 1, B: 2, A: 3, S: 4 };
-  score += Math.max(0, 4 - Math.abs((rTierMap[cfg.reifen] || 2) - (rTierMap[bike.reT] || 2))) * 5;
-  if (cfg.pm === "ja" && bike.pm) score += 20;
+  const isAero = bike.char.toLowerCase().includes("aero") || bike.cockInt;
+  const bTier = !bike.carbon ? 0 : isAero ? 3 : bike.gew <= 8 ? 2 : 1;
+  score += Math.max(0, 3 - Math.abs(rTier - bTier)) * 12;
+  if (cfg.schaltung === bike.sK) score += 30;
+  else if ((cfg.schaltung === "di2" || cfg.schaltung === "ultegra") && (bike.sK === "di2" || bike.sK === "ultegra")) score += 12;
+  const lrNum = { D: 0, C: 1, B: 2, A: 3, S30: 4, S50: 5 };
+  const blrNum = { D: 0, C: 1, B: 2, A: 3, S: 4 };
+  const cfgLr = lrNum[cfg.laufrad] ?? 2;
+  const bikeLr = blrNum[bike.lrT] ?? 2;
+  score += Math.max(0, 5 - Math.abs(cfgLr - bikeLr)) * 7;
+  const rtNum = { D: 0, C: 1, B: 2, A: 3, S: 4 };
+  score += Math.max(0, 4 - Math.abs((rtNum[cfg.reifen] ?? 2) - (rtNum[bike.reT] ?? 2))) * 6;
+  if (cfg.pm === "ja" && bike.pm) score += 25;
+  if (cfg.pm === "nein" && !bike.pm) score += 5;
   if (cfg.cockpit === "int" && bike.cockInt) score += 15;
+  if (cfg.cockpit === "std" && !bike.cockInt) score += 8;
+  if (cfg.rahmen === "alu" && bike.rm >= 35) score += 10;
   return score;
 }
 function KalkulatorView() {
@@ -1609,9 +1670,19 @@ function App() {
     color: "#f1f5f9",
     fontFamily: "'Outfit',system-ui,sans-serif",
     paddingBottom: 80
-  } }, null, /* @__PURE__ */ React.createElement("style", null, `*{box-sizing:border-box;margin:0;padding:0;}button{cursor:pointer;background:none;border:none;}
+  } }, /* @__PURE__ */ React.createElement("link", { href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Outfit:wght@400;500;700;900&display=swap", rel: "stylesheet" }), /* @__PURE__ */ React.createElement("style", null, `
+        *{box-sizing:border-box;margin:0;padding:0}
+        html{-webkit-text-size-adjust:100%}
+        button{cursor:pointer;background:none;border:none;font-family:inherit;touch-action:manipulation}
         @keyframes si{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-        ::-webkit-scrollbar{height:3px;background:#1a1f2e;}::-webkit-scrollbar-thumb{background:#374151;border-radius:2px;}`), /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(180deg,#0c1018,#060810)", borderBottom: "1px solid #1a1f2e", padding: "18px 16px 14px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#2d3748", fontFamily: "'JetBrains Mono',monospace", letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 } }, "RENNRAD KAUFANALYSE \xB7 v6 \xB7 18 R\xE4der \xB7 2025/2026"), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 900, fontSize: 24, letterSpacing: -1, lineHeight: 1.1 } }, "Dein n\xE4chstes ", /* @__PURE__ */ React.createElement("span", { style: { color: LM } }, "Rennrad")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 } }, [["Sattelh\xF6he", "654 mm"], ["Gr\xF6\xDFe", "181 cm"], ["VO\u2082max", "47"], ["FTP", "~175 W"], ["Kurbel", "172,5 mm"]].map(([k, v]) => /* @__PURE__ */ React.createElement("span", { key: k, style: {
+        ::-webkit-scrollbar{height:3px;width:3px;background:#1a1f2e}
+        ::-webkit-scrollbar-thumb{background:#374151;border-radius:2px}
+        .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .scroll-x::-webkit-scrollbar{display:none}
+        input[type=range]{-webkit-appearance:none;height:6px;border-radius:3px;background:#1a1f2e;outline:none}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#c8fb00;cursor:pointer}
+        select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+      `), /* @__PURE__ */ React.createElement("div", { style: { background: "linear-gradient(180deg,#0c1018,#060810)", borderBottom: "1px solid #1a1f2e", padding: "18px 16px 14px" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#2d3748", fontFamily: "'JetBrains Mono',monospace", letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 } }, "RENNRAD KAUFANALYSE \xB7 v7 \xB7 18 R\xE4der \xB7 2025/2026"), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 900, fontSize: 24, letterSpacing: -1, lineHeight: 1.1 } }, "Dein n\xE4chstes ", /* @__PURE__ */ React.createElement("span", { style: { color: LM } }, "Rennrad")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 } }, [["Sattelh\xF6he", "654 mm"], ["Gr\xF6\xDFe", "181 cm"], ["VO\u2082max", "47"], ["FTP", "~175 W"], ["Kurbel", "172,5 mm"]].map(([k, v]) => /* @__PURE__ */ React.createElement("span", { key: k, style: {
     fontSize: 8,
     padding: "2px 8px",
     borderRadius: 8,
@@ -1619,40 +1690,49 @@ function App() {
     border: "1px solid #1a1f2e",
     color: "#374151",
     fontFamily: "'JetBrains Mono',monospace"
-  } }, k, ": ", /* @__PURE__ */ React.createElement("b", { style: { color: "#4b5563" } }, v))))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 5, padding: "11px 16px 11px", overflowX: "auto", borderBottom: "1px solid #1a1f2e" } }, [["cards", "Karten"], ["compare", "Vergleich"], ["kosten", "Kosten"], ["geometry", "Geometrie"], ["radar", "Radar"], ["haendler", "H\xE4ndler"], ["kalkulator", "Kalkulator"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
+  } }, k, ": ", /* @__PURE__ */ React.createElement("b", { style: { color: "#4b5563" } }, v))))), /* @__PURE__ */ React.createElement("div", { style: { position: "relative", borderBottom: "1px solid #1a1f2e" } }, /* @__PURE__ */ React.createElement("div", { className: "scroll-x", style: { display: "flex", gap: 5, padding: "10px 16px" } }, [["cards", "Karten"], ["compare", "Vergleich"], ["kosten", "Kosten"], ["geometry", "Geometrie"], ["radar", "Radar"], ["haendler", "H\xE4ndler"], ["kalkulator", "Kalkulator"]].map(([v, l]) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: v,
       onClick: () => setView(v),
       style: {
-        padding: "5px 13px",
+        padding: "8px 14px",
         borderRadius: 20,
         border: "1px solid",
         flexShrink: 0,
+        minHeight: 38,
+        minWidth: "auto",
         borderColor: view === v ? LM : "#1f2937",
-        background: view === v ? "#1a2200" : "transparent",
+        background: view === v ? "#1a2200" : view === v ? "transparent" : "transparent",
         color: view === v ? LM : "#4b5563",
-        fontSize: 9,
-        fontWeight: 600,
-        fontFamily: "'JetBrains Mono',monospace"
+        fontSize: 10,
+        fontWeight: view === v ? 700 : 400,
+        fontFamily: "'JetBrains Mono',monospace",
+        boxShadow: view === v ? `0 0 0 1px ${LM}44` : "none"
       }
     },
     l
-  ))), /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5 } }, SZ.map((s) => /* @__PURE__ */ React.createElement(
+  ))), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", right: 0, top: 0, bottom: 0, width: 24, background: "linear-gradient(to right,transparent,#060810)", pointerEvents: "none" } })), /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 16px 0" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5 } }, SZ.map((s) => /* @__PURE__ */ React.createElement(
     "button",
     {
       key: s.id,
       onClick: () => setSz((p) => p === s.id ? null : s.id),
       style: {
-        padding: "4px 10px",
-        borderRadius: 8,
-        border: "1px solid",
+        padding: "9px 12px",
+        minHeight: 40,
+        minWidth: "auto",
+        borderRadius: 10,
+        border: "2px solid",
         flexShrink: 0,
         borderColor: sz === s.id ? LM : "#1f2937",
         background: sz === s.id ? "#1a2200" : "#0d1117",
-        color: sz === s.id ? LM : "#4b5563",
-        fontSize: 8,
-        fontFamily: "'JetBrains Mono',monospace"
+        color: sz === s.id ? LM : "#6b7280",
+        fontSize: 10,
+        fontFamily: "'JetBrains Mono',monospace",
+        fontWeight: sz === s.id ? 700 : 400,
+        boxShadow: sz === s.id ? `0 0 8px ${LM}44` : "none",
+        transform: sz === s.id ? "scale(1.02)" : "scale(1)",
+        transition: "all 0.15s"
       }
     },
     s.ic,
@@ -1761,54 +1841,46 @@ function App() {
       inVs: vs.includes(b.id),
       inkl_pm
     }
-  )))), view === "compare" && /* @__PURE__ */ React.createElement(CompareView, { ids: vs, inkl_pm }), view === "kosten" && /* @__PURE__ */ React.createElement(KostenView, { bikes: filtered.length ? filtered : BIKES, inkl_pm }), view === "geometry" && /* @__PURE__ */ React.createElement(GeometryView, { bikes: filtered.length ? filtered : BIKES }), view === "radar" && /* @__PURE__ */ React.createElement(RadarView, { bikes: filtered.length ? filtered : BIKES }), view === "haendler" && /* @__PURE__ */ React.createElement(HaendlerView, null), view === "kalkulator" && /* @__PURE__ */ React.createElement(KalkulatorView, null)), /* @__PURE__ */ React.createElement("div", { style: { margin: "16px 16px 0", padding: "9px 12px", background: "#0c1018", border: "1px solid #1a1f2e", borderRadius: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 7, color: "#2d3748", textTransform: "uppercase", letterSpacing: 2, marginBottom: 5, fontFamily: "'JetBrains Mono',monospace" } }, "Komponenten-Klassen"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, Object.entries(TIER).map(([k, v]) => /* @__PURE__ */ React.createElement("span", { key: k, style: {
-    display: "inline-flex",
+  )))), view === "compare" && /* @__PURE__ */ React.createElement(CompareView, { ids: vs, inkl_pm }), view === "kosten" && /* @__PURE__ */ React.createElement(KostenView, { bikes: filtered.length ? filtered : BIKES, inkl_pm }), view === "geometry" && /* @__PURE__ */ React.createElement(GeometryView, { bikes: filtered.length ? filtered : BIKES }), view === "radar" && /* @__PURE__ */ React.createElement(RadarView, { bikes: filtered.length ? filtered : BIKES }), view === "haendler" && /* @__PURE__ */ React.createElement(HaendlerView, null), view === "kalkulator" && /* @__PURE__ */ React.createElement(KalkulatorView, null)), /* @__PURE__ */ React.createElement("div", { style: { margin: "16px 16px 0", padding: "9px 12px", background: "#0c1018", border: "1px solid #1a1f2e", borderRadius: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8, color: "#4b5563", marginBottom: 6, fontFamily: "'JetBrains Mono',monospace", fontWeight: 600 } }, "Komponenten-Klassen (Laufrad & Reifen)"), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 } }, Object.entries(TIER).map(([k, v]) => /* @__PURE__ */ React.createElement("div", { key: k, style: {
+    display: "flex",
     alignItems: "center",
-    gap: 3,
-    padding: "2px 7px",
-    borderRadius: 4,
-    border: `1px solid ${v.bd}`,
-    background: v.bg,
-    color: v.tx,
-    fontSize: 8,
-    fontFamily: "'JetBrains Mono',monospace"
-  } }, /* @__PURE__ */ React.createElement("strong", null, "[", k, "]"), " ", v.lbl)))));
+    gap: 6,
+    padding: "5px 8px",
+    borderRadius: 6,
+    border: `1px solid ${v.bd}22`,
+    background: v.bg
+  } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: v.tx, fontFamily: "'JetBrains Mono',monospace", flexShrink: 0 } }, "[", k, "]"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 9, color: v.tx, opacity: 0.85 } }, v.lbl))))));
 }
-
-
+export {
+  App as default
+};
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(e) { return { error: e }; }
-  componentDidCatch(e, info) {
-    console.error("React error:", e, info);
-  }
+  componentDidCatch(e) { console.error("React error:", e); }
   render() {
     if (this.state.error) {
       const e = this.state.error;
       return React.createElement("div", {style:{padding:24,color:"#f87171",fontFamily:"monospace",fontSize:12,background:"#060810",minHeight:"100vh"}},
         React.createElement("div", {style:{color:"#c8fb00",fontWeight:700,marginBottom:12,fontSize:14}}, "⚠ Runtime Fehler:"),
-        React.createElement("pre", {style:{color:"#f87171",fontSize:10,whiteSpace:"pre-wrap",wordBreak:"break-all"}}, String(e.stack || e.message || e))
+        React.createElement("pre", {style:{color:"#f87171",fontSize:10,whiteSpace:"pre-wrap",wordBreak:"break-all"}},
+          String(e.stack || e.message || e))
       );
     }
     return this.props.children;
   }
 }
+ReactDOM.createRoot(document.getElementById("root")).render(
+  React.createElement(ErrorBoundary, null, React.createElement(App, null))
+);
+(function poll() {
+  var r = document.getElementById("root");
+  if (r && r.firstChild) { _hideLoading(); }
+  else { requestAnimationFrame(poll); }
+})();
 
-  // Mount
-  try {
-    var _root = ReactDOM.createRoot(document.getElementById("root"));
-    _root.render(React.createElement(ErrorBoundary, null, React.createElement(App, null)));
-    // Poll for DOM mount
-    (function poll() {
-      var r = document.getElementById("root");
-      if (r && r.firstChild) { _hideLoading(); }
-      else { requestAnimationFrame(poll); }
-    })();
-  } catch(e) {
-    showErr(e.stack || e.message || String(e));
   }
-  } // end if React loaded
   </script>
 
 </body>
